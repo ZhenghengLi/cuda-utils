@@ -1,0 +1,10 @@
+.dockerignore
+Dockerfile
+**/build
+.gradle
+gradlew.bat
+.classpath
+.project
+.settings
+.vscode
+.gitignore

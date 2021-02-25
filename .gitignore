@@ -1,0 +1,11 @@
+.gradle/*
+**/build/*
+gradlew.bat
+.classpath
+.project
+.settings
+**/bin/*
+**/.vscode/*
+**/.DS_Store
+*.h5
+__pycache__/
