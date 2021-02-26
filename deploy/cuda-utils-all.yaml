@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cuda-utils-all
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      name: cuda-utils-all
+  template:
+    metadata:
+      labels:
+        name: cuda-utils-all
+    spec:
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+      restartPolicy: Always
+      containers:
+        - name: cuda-utils
+          image: zhenghengli/cuda-utils:latest
+          command:
+            - sleep
+            - 1000d

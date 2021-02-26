@@ -39,4 +39,14 @@ ENV PATH=$INSTALL_DIR/bin:$INSTALL_DIR/scripts:$PATH \
     COMMIT_MSG="$COMMIT_MSG" \
     BUILD_TIME="$BUILD_TIME"
 
+# user setting
+RUN set -x \
+    ## set root password for runtime debug
+    && echo "root:20180427" | chpasswd \
+    ## use a non-root user for normal work
+    && groupadd mark --gid=1010 \
+    && useradd -m -g mark --uid=1017 mark -s /bin/bash
+
+USER mark
+
 CMD ["/bin/bash"]
