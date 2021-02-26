@@ -16,5 +16,5 @@ endif()
 find_package(Threads REQUIRED)
 
 add_subdirectory(common)
-add_subdirectory(device_query)
+add_subdirectory(device-query)
 
