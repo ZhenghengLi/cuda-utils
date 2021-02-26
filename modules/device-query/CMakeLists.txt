@@ -1,5 +1,1 @@
-file(GLOB sources src/*)
-file(GLOB headers inc/*)
-add_executable(device-query ${sources} ${headers})
-target_link_libraries(device-query PRIVATE common)
-install(TARGETS device-query DESTINATION bin)
+standard_exe(device-query LIBRARIES common)
