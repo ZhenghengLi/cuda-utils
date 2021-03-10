@@ -7,11 +7,23 @@ using namespace std;
 
 int main(int argc, char** argv) {
 
-    int deviceIndex = 0;
-
     int deviceCount = 0;
     cudaGetDeviceCount(&deviceCount);
     cout << "deviceCount = " << deviceCount << endl;
+
+    int deviceIndex = 0;
+    cout << "deviceIndex = " << flush;
+    cin >> deviceIndex;
+
+    if (deviceIndex >= deviceCount) {
+        cout << "deviceIndex is out of range [0, " << deviceCount << ")" << endl;
+        return 1;
+    }
+
+    char pause = 0;
+
+    cout << "before cudaSetDevice" << endl;
+    cin >> pause;
 
     if (cudaSetDevice(deviceIndex) == cudaSuccess) {
         cudaDeviceProp deviceProp;
@@ -29,8 +41,14 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    cout << "before cudaStreamCreate" << endl;
+    cin >> pause;
+
     cudaStream_t stream;
     cudaStreamCreate(&stream);
+
+    cout << "before cudaStreamDestroy" << endl;
+    cin >> pause;
 
     cudaStreamDestroy(stream);
 
