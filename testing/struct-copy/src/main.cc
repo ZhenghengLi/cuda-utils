@@ -84,6 +84,23 @@ int main(int argc, char** argv) {
         }
     }
 
+    // allocate memory on device
+    CalibDataField* calib_data_device = nullptr;
+    ImageDataField* image_data_device = nullptr;
+    if (cudaMalloc(&calib_data_device, sizeof(CalibDataField)) != cudaSuccess) {
+        cerr << "cudaMalloc failed for calib_data_device." << endl;
+        return 1;
+    }
+    if (cudaMalloc(&image_data_device, sizeof(ImageDataField)) != cudaSuccess) {
+        cerr << "cudaMalloc failed for image_data_device." << endl;
+        return 1;
+    }
+    // copy calibration data into device
+    if (cudaMemcpy(calib_data_device, calib_data_host, sizeof(CalibDataField), cudaMemcpyHostToDevice) != cudaSuccess) {
+        cerr << "cudaMemcpy failed for calibration data." << endl;
+        return 1;
+    }
+
     // CPU test begin ///////////////////////////////////////////////
     duration<double, micro> start_time = system_clock::now().time_since_epoch();
 
@@ -110,17 +127,17 @@ int main(int argc, char** argv) {
 
     // CPU test end /////////////////////////////////////////////////
 
-    CalibDataField* calib_data_device = nullptr;
-    ImageDataField* image_data_device = nullptr;
-
     cudaStream_t stream;
     cudaStreamCreate(&stream);
 
     cudaStreamDestroy(stream);
 
     // clean data
+    cudaFreeHost(calib_data_host);
     cudaFreeHost(image_data_host);
     cudaFreeHost(image_data_host_tmp);
+    cudaFree(calib_data_device);
+    cudaFree(image_data_device);
 
     return 0;
 }
