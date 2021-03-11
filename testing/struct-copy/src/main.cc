@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
     double time_used = finish_time.count() - start_time.count();
 
     double cpu_fps = REPEAT_NUM * 1000000.0 / time_used;
-    cout << "CPU result: " << cpu_fps << " fps" << endl;
+    cout << "CPU result: " << (long)cpu_fps << " fps" << endl;
     // CPU test end /////////////////////////////////////////////////
 
     // GPU test begin ///////////////////////////////////////////////
@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
     float msecTotal = 1.0f;
     cudaEventElapsedTime(&msecTotal, start, stop);
     double gpu_fps = REPEAT_NUM * 1000.0 / msecTotal;
-    cout << "GPU result: " << gpu_fps << " fps" << endl;
+    cout << "GPU result: " << (long)gpu_fps << " fps" << endl;
 
     cudaStreamDestroy(stream);
     // GPU test end /////////////////////////////////////////////////
