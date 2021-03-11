@@ -208,6 +208,7 @@ int main(int argc, char** argv) {
 
     // clean data
     cudaFreeHost(calib_data_host);
+    cudaFreeHost(image_data_host);
     cudaFreeHost(image_data_host_tmp);
     cudaFreeHost(image_data_host_cpu);
     cudaFreeHost(image_data_host_gpu);
