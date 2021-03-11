@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
             if (i == 4 || i == 6 || i == 8 || i == 10) cout << "-";
             cout << hex << (int)((uint8_t*)deviceProp.uuid.bytes)[i];
         }
-        cout << ")" << endl;
+        cout << dec << ")" << endl;
     } else {
         cout << "failed to select device " << deviceIndex << endl;
         return 1;
@@ -159,8 +159,8 @@ int main(int argc, char** argv) {
 
     float msecTotal = 1.0f;
     cudaEventElapsedTime(&msecTotal, start, stop);
-    double gps_fps = REPEAT_NUM * 1000.0 / msecTotal;
-    cout << "GPU result: " << cpu_fps << " fps" << endl;
+    double gpu_fps = REPEAT_NUM * 1000.0 / msecTotal;
+    cout << "GPU result: " << gpu_fps << " fps" << endl;
 
     cudaStreamDestroy(stream);
     // GPU test end /////////////////////////////////////////////////
