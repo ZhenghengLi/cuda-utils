@@ -66,19 +66,24 @@ int main(int argc, char** argv) {
     }
 
     // prepare image data
-    ImageDataField* image_data_host_1 = nullptr;
-    ImageDataField* image_data_host_2 = nullptr;
+    ImageDataField* image_data_host = nullptr;
     ImageDataField* image_data_host_tmp = nullptr;
-    if (cudaMallocHost(&image_data_host_1, sizeof(ImageDataField)) != cudaSuccess) {
-        cerr << "cudaMallocHost failed for image_data_host_1." << endl;
-        return 1;
-    }
-    if (cudaMallocHost(&image_data_host_2, sizeof(ImageDataField)) != cudaSuccess) {
-        cerr << "cudaMallocHost failed for image_data_host_2." << endl;
+    ImageDataField* image_data_host_cpu = nullptr;
+    ImageDataField* image_data_host_gpu = nullptr;
+    if (cudaMallocHost(&image_data_host, sizeof(ImageDataField)) != cudaSuccess) {
+        cerr << "cudaMallocHost failed for image_data_host." << endl;
         return 1;
     }
     if (cudaMallocHost(&image_data_host_tmp, sizeof(ImageDataField)) != cudaSuccess) {
         cerr << "cudaMallocHost failed for image_data_host_tmp." << endl;
+        return 1;
+    }
+    if (cudaMallocHost(&image_data_host_cpu, sizeof(ImageDataField)) != cudaSuccess) {
+        cerr << "cudaMallocHost failed for image_data_host_cpu." << endl;
+        return 1;
+    }
+    if (cudaMallocHost(&image_data_host_gpu, sizeof(ImageDataField)) != cudaSuccess) {
+        cerr << "cudaMallocHost failed for image_data_host_gpu." << endl;
         return 1;
     }
     // init
@@ -86,8 +91,7 @@ int main(int argc, char** argv) {
         for (int i = 0; i < FRAME_H; i++) {
             for (int j = 0; j < FRAME_W; j++) {
                 float pixel = 6000 + random() % 9000;
-                image_data_host_1->pixel_data[m][i][j] = pixel;
-                image_data_host_2->pixel_data[m][i][j] = pixel;
+                image_data_host->pixel_data[m][i][j] = pixel;
             }
         }
     }
@@ -115,18 +119,17 @@ int main(int argc, char** argv) {
     duration<double, micro> start_time = system_clock::now().time_since_epoch();
 
     for (int r = 0; r < REPEAT_NUM; r++) {
-        memcpy(image_data_host_tmp, image_data_host_1, sizeof(ImageDataField));
+        memcpy(image_data_host_tmp, image_data_host, sizeof(ImageDataField));
         for (int m = 0; m < MOD_CNT; m++) {
             for (int i = 0; i < FRAME_H; i++) {
                 for (int j = 0; j < FRAME_W; j++) {
-                    float& pixel = image_data_host_tmp->pixel_data[m][i][j];
-                    float& pedestal = calib_data_host->pedestal[m][i][j];
-                    float& gain = calib_data_host->gain[m][i][j];
-                    pixel = (pixel - pedestal) / gain;
+                    image_data_host_tmp->pixel_data[m][i][j] =
+                        (image_data_host_tmp->pixel_data[m][i][j] - calib_data_host->pedestal[m][i][j]) /
+                        calib_data_host->gain[m][i][j];
                 }
             }
         }
-        memcpy(image_data_host_1, image_data_host_tmp, sizeof(ImageDataField));
+        memcpy(image_data_host_cpu, image_data_host_tmp, sizeof(ImageDataField));
     }
 
     duration<double, micro> finish_time = system_clock::now().time_since_epoch();
@@ -148,9 +151,9 @@ int main(int argc, char** argv) {
     cudaEventRecord(start, stream);
 
     for (int r = 0; r < REPEAT_NUM; r++) {
-        cudaMemcpyAsync(image_data_device, image_data_host_2, sizeof(CalibDataField), cudaMemcpyHostToDevice, stream);
+        cudaMemcpyAsync(image_data_device, image_data_host, sizeof(CalibDataField), cudaMemcpyHostToDevice, stream);
         gpu_do_calib(image_data_device, calib_data_device, stream);
-        cudaMemcpyAsync(image_data_host_2, image_data_device, sizeof(CalibDataField), cudaMemcpyDeviceToHost, stream);
+        cudaMemcpyAsync(image_data_host_gpu, image_data_device, sizeof(CalibDataField), cudaMemcpyDeviceToHost, stream);
         cudaStreamSynchronize(stream);
     }
 
@@ -165,10 +168,30 @@ int main(int argc, char** argv) {
     cudaStreamDestroy(stream);
     // GPU test end /////////////////////////////////////////////////
 
+    // check begin //////////////////////////////////////////////////
+    bool success = true;
+    for (int m = 0; m < MOD_CNT; m++) {
+        for (int i = 0; i < FRAME_H; i++) {
+            for (int j = 0; j < FRAME_W; j++) {
+                if (image_data_host_gpu->pixel_data[m][i][j] - image_data_host_cpu->pixel_data[m][i][j] > 1e-5) {
+                    success = false;
+                }
+            }
+        }
+    }
+    if (success) {
+        cout << "Test PASSED." << endl;
+    } else {
+        cout << "Test FAILED." << endl;
+    }
+
+    // check end ////////////////////////////////////////////////////
+
     // clean data
     cudaFreeHost(calib_data_host);
-    cudaFreeHost(image_data_host_1);
-    cudaFreeHost(image_data_host_2);
+    cudaFreeHost(image_data_host_tmp);
+    cudaFreeHost(image_data_host_cpu);
+    cudaFreeHost(image_data_host_gpu);
     cudaFreeHost(image_data_host_tmp);
     cudaFree(calib_data_device);
     cudaFree(image_data_device);
