@@ -165,9 +165,9 @@ int main(int argc, char** argv) {
     cudaEventRecord(start, stream);
 
     for (int r = 0; r < repeat_num; r++) {
-        cudaMemcpyAsync(image_data_device, image_data_host, sizeof(CalibDataField), cudaMemcpyHostToDevice, stream);
+        cudaMemcpyAsync(image_data_device, image_data_host, sizeof(ImageDataField), cudaMemcpyHostToDevice, stream);
         gpu_do_calib(image_data_device, calib_data_device, stream);
-        cudaMemcpyAsync(image_data_host_gpu, image_data_device, sizeof(CalibDataField), cudaMemcpyDeviceToHost, stream);
+        cudaMemcpyAsync(image_data_host_gpu, image_data_device, sizeof(ImageDataField), cudaMemcpyDeviceToHost, stream);
         cudaStreamSynchronize(stream);
     }
 
