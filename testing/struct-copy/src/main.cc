@@ -137,6 +137,15 @@ int main(int argc, char** argv) {
         memcpy(image_data_host_cpu, image_data_host_tmp, sizeof(ImageDataField));
     }
 
+    for (int i = 0; i < 10; i++) {
+        cout << image_data_host->pixel_data[0][0][i] << " ";
+    }
+    cout << endl;
+    for (int i = 0; i < 10; i++) {
+        cout << image_data_host_cpu->pixel_data[0][0][i] << " ";
+    }
+    cout << endl;
+
     duration<double, micro> finish_time = system_clock::now().time_since_epoch();
     double time_used = finish_time.count() - start_time.count();
 
@@ -173,12 +182,17 @@ int main(int argc, char** argv) {
     cudaStreamDestroy(stream);
     // GPU test end /////////////////////////////////////////////////
 
+    for (int i = 0; i < 10; i++) {
+        cout << image_data_host_gpu->pixel_data[0][0][i] << " ";
+    }
+    cout << endl;
+
     // check begin //////////////////////////////////////////////////
     bool success = true;
     for (int m = 0; m < MOD_CNT; m++) {
         for (int i = 0; i < FRAME_H; i++) {
             for (int j = 0; j < FRAME_W; j++) {
-                if (image_data_host_gpu->pixel_data[m][i][j] - image_data_host_cpu->pixel_data[m][i][j] > 1e-5) {
+                if (abs(image_data_host_gpu->pixel_data[m][i][j] - image_data_host_cpu->pixel_data[m][i][j]) > 1e-5) {
                     success = false;
                 }
             }
