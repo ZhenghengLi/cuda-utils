@@ -4,24 +4,9 @@
 #include <memory>
 
 #include "ImageDataField.hh"
+#include "CalibDataField.hh"
 
 using namespace std;
-
-class CalibData {
-public:
-    CalibData() {
-        pedestal = new float[MOD_CNT][FRAME_H][FRAME_W];
-        gain = new float[MOD_CNT][FRAME_H][FRAME_W];
-    }
-    ~CalibData() {
-        delete[] pedestal;
-        delete[] gain;
-    }
-
-public:
-    float (*pedestal)[FRAME_H][FRAME_W];
-    float (*gain)[FRAME_H][FRAME_W];
-};
 
 int main(int argc, char** argv) {
 
@@ -58,12 +43,16 @@ int main(int argc, char** argv) {
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
     // prepare calib data
-    CalibData calib;
+    CalibDataField* calib_data_host = nullptr;
+    if (cudaMallocHost(&calib_data_host, sizeof(CalibDataField)) != cudaSuccess) {
+        cerr << "cudaMallocHost failed for calib_data_host." << endl;
+        return 1;
+    }
     for (int m = 0; m < MOD_CNT; m++) {
         for (int i = 0; i < FRAME_H; i++) {
             for (int j = 0; j < FRAME_W; j++) {
-                calib.pedestal[m][i][j] = 1000 + random() % 4000;
-                calib.gain[m][i][j] = 100 + random() % 100;
+                calib_data_host->pedestal[m][i][j] = 1000 + random() % 4000;
+                calib_data_host->gain[m][i][j] = 100 + random() % 100;
             }
         }
     }
@@ -88,6 +77,7 @@ int main(int argc, char** argv) {
         }
     }
 
+    CalibDataField* calib_data_device = nullptr;
     ImageDataField* image_data_device = nullptr;
 
     cudaStream_t stream;
