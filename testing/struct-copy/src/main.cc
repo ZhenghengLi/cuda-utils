@@ -9,8 +9,6 @@
 #include "CalibDataField.hh"
 #include "device_routines.hh"
 
-#define REPEAT_NUM 5000
-
 using namespace std;
 using std::chrono::duration;
 using std::chrono::system_clock;
@@ -29,6 +27,13 @@ int main(int argc, char** argv) {
     if (deviceIndex >= deviceCount) {
         cout << "deviceIndex is out of range [0, " << deviceCount << ")" << endl;
         return 1;
+    }
+
+    int repeat_num = 1;
+    cout << "reapeat_num = " << flush;
+    cin >> repeat_num;
+    if (repeat_num < 1) {
+        repeat_num = 1;
     }
 
     // select device and print its name on success
@@ -114,11 +119,11 @@ int main(int argc, char** argv) {
     }
 
     // CPU test begin ///////////////////////////////////////////////
-    cout << "do test on CPU with total " << REPEAT_NUM << " images ..." << endl;
+    cout << "do test on CPU with total " << repeat_num << " images ..." << endl;
 
     duration<double, micro> start_time = system_clock::now().time_since_epoch();
 
-    for (int r = 0; r < REPEAT_NUM; r++) {
+    for (int r = 0; r < repeat_num; r++) {
         memcpy(image_data_host_tmp, image_data_host, sizeof(ImageDataField));
         for (int m = 0; m < MOD_CNT; m++) {
             for (int i = 0; i < FRAME_H; i++) {
@@ -135,12 +140,12 @@ int main(int argc, char** argv) {
     duration<double, micro> finish_time = system_clock::now().time_since_epoch();
     double time_used = finish_time.count() - start_time.count();
 
-    double cpu_fps = REPEAT_NUM * 1000000.0 / time_used;
+    double cpu_fps = repeat_num * 1000000.0 / time_used;
     cout << "CPU result: " << (long)cpu_fps << " fps" << endl;
     // CPU test end /////////////////////////////////////////////////
 
     // GPU test begin ///////////////////////////////////////////////
-    cout << "do test on GPU with total " << REPEAT_NUM << " images ..." << endl;
+    cout << "do test on GPU with total " << repeat_num << " images ..." << endl;
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
@@ -150,7 +155,7 @@ int main(int argc, char** argv) {
     cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
     cudaEventRecord(start, stream);
 
-    for (int r = 0; r < REPEAT_NUM; r++) {
+    for (int r = 0; r < repeat_num; r++) {
         cudaMemcpyAsync(image_data_device, image_data_host, sizeof(CalibDataField), cudaMemcpyHostToDevice, stream);
         gpu_do_calib(image_data_device, calib_data_device, stream);
         cudaMemcpyAsync(image_data_host_gpu, image_data_device, sizeof(CalibDataField), cudaMemcpyDeviceToHost, stream);
@@ -162,7 +167,7 @@ int main(int argc, char** argv) {
 
     float msecTotal = 1.0f;
     cudaEventElapsedTime(&msecTotal, start, stop);
-    double gpu_fps = REPEAT_NUM * 1000.0 / msecTotal;
+    double gpu_fps = repeat_num * 1000.0 / msecTotal;
     cout << "GPU result: " << (long)gpu_fps << " fps" << endl;
 
     cudaStreamDestroy(stream);
