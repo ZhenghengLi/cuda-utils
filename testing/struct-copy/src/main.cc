@@ -2,11 +2,18 @@
 #include <cstdlib>
 #include <cuda_runtime.h>
 #include <memory>
+#include <chrono>
+#include <cstring>
 
 #include "ImageDataField.hh"
 #include "CalibDataField.hh"
 
+#define REPEAT_NUM 5000
+
 using namespace std;
+using std::chrono::duration;
+using std::chrono::system_clock;
+using std::micro;
 
 int main(int argc, char** argv) {
 
@@ -76,6 +83,32 @@ int main(int argc, char** argv) {
             }
         }
     }
+
+    // CPU test begin ///////////////////////////////////////////////
+    duration<double, micro> start_time = system_clock::now().time_since_epoch();
+
+    for (int r = 0; r < REPEAT_NUM; r++) {
+        memcpy(image_data_host_tmp, image_data_host, sizeof(ImageDataField));
+        for (int m = 0; m < MOD_CNT; m++) {
+            for (int i = 0; i < FRAME_H; i++) {
+                for (int j = 0; j < FRAME_W; j++) {
+                    float& pixel = image_data_host_tmp->pixel_data[m][i][j];
+                    float& pedestal = calib_data_host->pedestal[m][i][j];
+                    float& gain = calib_data_host->gain[m][i][j];
+                    pixel = (pixel - pedestal) / gain;
+                }
+            }
+        }
+        memcpy(image_data_host, image_data_host_tmp, sizeof(ImageDataField));
+    }
+
+    duration<double, micro> finish_time = system_clock::now().time_since_epoch();
+    double time_used = finish_time.count() - start_time.count();
+
+    double cpu_fps = REPEAT_NUM * 1000000.0 / time_used;
+    cout << "CPU result: " << cpu_fps << " fps" << endl;
+
+    // CPU test end /////////////////////////////////////////////////
 
     CalibDataField* calib_data_device = nullptr;
     ImageDataField* image_data_device = nullptr;
