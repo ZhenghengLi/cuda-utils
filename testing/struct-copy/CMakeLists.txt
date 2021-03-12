@@ -1,1 +1,0 @@
-standard_exe(struct-copy INCLUDE_DIRS ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
