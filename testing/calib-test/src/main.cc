@@ -21,19 +21,26 @@ int main(int argc, char** argv) {
     cout << "deviceCount = " << deviceCount << endl;
 
     int deviceIndex = 0;
-    cout << "deviceIndex = " << flush;
-    cin >> deviceIndex;
+    int repeatNum = 1;
+    int gpuOnly = 0;
+
+    if (argc > 1) {
+        repeatNum = atoi(argv[1]);
+    }
+    if (argc > 2) {
+        deviceIndex = atoi(argv[2]);
+    }
+    if (argc > 3) {
+        gpuOnly = atoi(argv[3]);
+    }
 
     if (deviceIndex >= deviceCount) {
         cout << "deviceIndex is out of range [0, " << deviceCount << ")" << endl;
         return 1;
     }
 
-    int repeat_num = 1;
-    cout << "reapeat_num = " << flush;
-    cin >> repeat_num;
-    if (repeat_num < 1) {
-        repeat_num = 1;
+    if (repeatNum < 1) {
+        repeatNum = 1;
     }
 
     // select device and print its name on success
@@ -119,33 +126,36 @@ int main(int argc, char** argv) {
     }
 
     // CPU test begin ///////////////////////////////////////////////
-    cout << "do test on CPU with total " << repeat_num << " images ..." << endl;
+    if (!gpuOnly) {
 
-    duration<double, micro> start_time = system_clock::now().time_since_epoch();
+        cout << endl << "do test on CPU with total " << repeatNum << " images ..." << endl;
 
-    for (int r = 0; r < repeat_num; r++) {
-        memcpy(image_data_host_tmp, image_data_host, sizeof(ImageDataField));
-        for (int m = 0; m < MOD_CNT; m++) {
-            for (int i = 0; i < FRAME_H; i++) {
-                for (int j = 0; j < FRAME_W; j++) {
-                    image_data_host_tmp->pixel_data[m][i][j] =
-                        (image_data_host_tmp->pixel_data[m][i][j] - calib_data_host->pedestal[m][i][j]) /
-                        calib_data_host->gain[m][i][j];
+        duration<double, micro> start_time = system_clock::now().time_since_epoch();
+
+        for (int r = 0; r < repeatNum; r++) {
+            memcpy(image_data_host_tmp, image_data_host, sizeof(ImageDataField));
+            for (int m = 0; m < MOD_CNT; m++) {
+                for (int i = 0; i < FRAME_H; i++) {
+                    for (int j = 0; j < FRAME_W; j++) {
+                        image_data_host_tmp->pixel_data[m][i][j] =
+                            (image_data_host_tmp->pixel_data[m][i][j] - calib_data_host->pedestal[m][i][j]) /
+                            calib_data_host->gain[m][i][j];
+                    }
                 }
             }
+            memcpy(image_data_host_cpu, image_data_host_tmp, sizeof(ImageDataField));
         }
-        memcpy(image_data_host_cpu, image_data_host_tmp, sizeof(ImageDataField));
+
+        duration<double, micro> finish_time = system_clock::now().time_since_epoch();
+        double time_used = finish_time.count() - start_time.count();
+
+        double cpu_fps = repeatNum * 1000000.0 / time_used;
+        cout << "CPU result: " << (long)cpu_fps << " fps" << endl;
     }
-
-    duration<double, micro> finish_time = system_clock::now().time_since_epoch();
-    double time_used = finish_time.count() - start_time.count();
-
-    double cpu_fps = repeat_num * 1000000.0 / time_used;
-    cout << "CPU result: " << (long)cpu_fps << " fps" << endl;
     // CPU test end /////////////////////////////////////////////////
 
     // GPU test begin ///////////////////////////////////////////////
-    cout << "do test on GPU with total " << repeat_num << " images ..." << endl;
+    cout << endl << "do test on GPU with total " << repeatNum << " images ..." << endl;
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
@@ -155,7 +165,7 @@ int main(int argc, char** argv) {
     cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
     cudaEventRecord(start, stream);
 
-    for (int r = 0; r < repeat_num; r++) {
+    for (int r = 0; r < repeatNum; r++) {
         cudaMemcpyAsync(image_data_device, image_data_host, sizeof(ImageDataField), cudaMemcpyHostToDevice, stream);
         gpu_do_calib(image_data_device, calib_data_device, stream);
         cudaMemcpyAsync(image_data_host_gpu, image_data_device, sizeof(ImageDataField), cudaMemcpyDeviceToHost, stream);
@@ -167,54 +177,60 @@ int main(int argc, char** argv) {
 
     float msecTotal = 1.0f;
     cudaEventElapsedTime(&msecTotal, start, stop);
-    double gpu_fps = repeat_num * 1000.0 / msecTotal;
+    double gpu_fps = repeatNum * 1000.0 / msecTotal;
     cout << "GPU result: " << (long)gpu_fps << " fps" << endl;
 
     cudaStreamDestroy(stream);
     // GPU test end /////////////////////////////////////////////////
 
     // check begin //////////////////////////////////////////////////
-    cout << "check results ..." << endl;
-    cout << "ADC: " << flush;
-    for (int i = 0; i < 10; i++) {
-        cout << image_data_host->pixel_data[0][0][i] << " ";
-    }
-    cout << endl;
-    cout << "CPU: " << flush;
-    for (int i = 0; i < 10; i++) {
-        cout << image_data_host_cpu->pixel_data[0][0][i] << " ";
-    }
-    cout << endl;
-    cout << "GPU: " << flush;
-    for (int i = 0; i < 10; i++) {
-        cout << image_data_host_gpu->pixel_data[0][0][i] << " ";
-    }
-    cout << endl;
+    if (!gpuOnly) {
 
-    bool success = true;
-    for (int m = 0; m < MOD_CNT; m++) {
-        for (int i = 0; i < FRAME_H; i++) {
-            for (int j = 0; j < FRAME_W; j++) {
-                if (abs(image_data_host_gpu->pixel_data[m][i][j] - image_data_host_cpu->pixel_data[m][i][j]) > 1e-5) {
-                    success = false;
+        cout << endl << "check results ..." << endl;
+        cout << "ADC: " << flush;
+        for (int i = 0; i < 10; i++) {
+            cout << image_data_host->pixel_data[0][0][i] << " ";
+        }
+        cout << endl;
+        cout << "CPU: " << flush;
+        for (int i = 0; i < 10; i++) {
+            cout << image_data_host_cpu->pixel_data[0][0][i] << " ";
+        }
+        cout << endl;
+        cout << "GPU: " << flush;
+        for (int i = 0; i < 10; i++) {
+            cout << image_data_host_gpu->pixel_data[0][0][i] << " ";
+        }
+        cout << endl;
+
+        bool success = true;
+        for (int m = 0; m < MOD_CNT; m++) {
+            for (int i = 0; i < FRAME_H; i++) {
+                for (int j = 0; j < FRAME_W; j++) {
+                    if (abs(image_data_host_gpu->pixel_data[m][i][j] - image_data_host_cpu->pixel_data[m][i][j]) >
+                        1e-5) {
+                        success = false;
+                    }
                 }
             }
         }
-    }
-    if (success) {
-        cout << "Test PASSED." << endl;
-    } else {
-        cout << "Test FAILED." << endl;
+        if (success) {
+            cout << endl << "Test PASSED." << endl;
+        } else {
+            cout << endl << "Test FAILED." << endl;
+        }
     }
 
     // check end ////////////////////////////////////////////////////
 
     // clean data
     cudaFreeHost(calib_data_host);
+
     cudaFreeHost(image_data_host);
     cudaFreeHost(image_data_host_tmp);
     cudaFreeHost(image_data_host_cpu);
     cudaFreeHost(image_data_host_gpu);
+
     cudaFree(calib_data_device);
     cudaFree(image_data_device);
 
