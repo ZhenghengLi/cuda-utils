@@ -6,7 +6,7 @@
 struct ImageFeature {
     float global_rms;
     int peak_counts;
-    MSGPACK_DEFINE_MAP(global_rms, peak_counts);
+    MSGPACK_DEFINE_MAP(global_rms, peak_counts)
 };
 
 #endif
