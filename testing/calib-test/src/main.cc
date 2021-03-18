@@ -107,6 +107,7 @@ int main(int argc, char** argv) {
             }
         }
     }
+    image_data_host->calib_level = 0;
 
     // allocate memory on device
     CalibDataField* calib_data_device = nullptr;

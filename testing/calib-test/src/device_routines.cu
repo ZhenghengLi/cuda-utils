@@ -12,6 +12,16 @@ __global__ void calib_kernel(ImageDataField* image_data, CalibDataField* calib_d
 }
 
 void gpu_do_calib(ImageDataField* image_data_device, CalibDataField* calib_data_device, cudaStream_t stream) {
+
+    char calib_level = 0;
+    cudaMemcpyAsync(&calib_level, &image_data_device->calib_level, 1, cudaMemcpyDeviceToHost, stream);
+    cudaStreamSynchronize(stream);
+    if (calib_level >= 1) return;
+
     calib_kernel<<<dim3(MOD_CNT, FRAME_H / STRIDE_H), FRAME_W * STRIDE_H, 0, stream>>>(
         image_data_device, calib_data_device);
+
+    calib_level = 1;
+    cudaMemcpyAsync(&image_data_device->calib_level, &calib_level, 1, cudaMemcpyHostToDevice, stream);
+    cudaStreamSynchronize(stream);
 }
